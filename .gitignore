@@ -1,0 +1,60 @@
+# Java / Maven / Gradle
+*.class
+*.jar
+*.war
+*.ear
+target/
+build/
+out/
+.gradle/
+*.iml
+
+# IDE - IntelliJ
+.idea/
+*.iws
+*.ipr
+
+# IDE - VSCode
+.vscode/
+
+# IDE - Eclipse
+.project
+.classpath
+.settings/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Env / secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Sensitive - 不要把任何 token / 凭证 commit 进来
+credentials.json
+secrets.yaml
+
+# Application
+*.pid
+*.seed
+*.pid.lock
+
+# Docker
+docker-compose.override.yml
+
+# Coverage / test
+*.coverage
+*.html
+jacoco/
+
+# Misc
+*.swp
+*.bak
+*~
