@@ -22,6 +22,9 @@ spring:
     show-sql: true            # 打印 SQL（学习用，生产关掉）
     properties:
       hibernate.format_sql: true
+    # Spring Boot 2.5+ 默认 data.sql 在 JPA 建表前执行，会报"表不存在"
+    # 设 true 让 Hibernate 先建表，再跑 data.sql
+    defer-datasource-initialization: true
 
   h2:
     console:
@@ -44,8 +47,8 @@ shortlink:
     ttl-seconds: 2592000       # 30 天
   rate-limit:
     enabled: true
-    capacity: 10               # 令牌桶容量
-    rate: 5                    # 每秒补充令牌数
+    capacity: 3                # 令牌桶容量（紧一点方便测试，生产改回 10）
+    rate: 0.5                  # 每秒补充令牌数（生产改回 5）
 
 logging:
   level:
