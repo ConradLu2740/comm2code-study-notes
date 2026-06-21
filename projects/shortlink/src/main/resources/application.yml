@@ -1,0 +1,83 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: shortlink
+  profiles:
+    active: dev   # 启动时激活的 profile
+
+  # ===== H2 数据库（默认）=====
+  datasource:
+    url: jdbc:h2:mem:shortlink;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  jpa:
+    hibernate:
+      ddl-auto: update       # 启动时自动建表（开发用）
+    show-sql: true            # 打印 SQL（学习用，生产关掉）
+    properties:
+      hibernate.format_sql: true
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console       # http://localhost:8080/h2-console 看数据库
+
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:data.sql
+
+# ===== 短链接专属配置 =====
+shortlink:
+  base-url: http://localhost:8080
+  short-code:
+    length: 7                 # 短码长度（7 位 ≈ 3.5 万亿组合）
+  cache:
+    # 可选值: memory（默认, ConcurrentHashMap）| redis（需 Redis 服务）
+    type: memory
+    ttl-seconds: 2592000       # 30 天
+  rate-limit:
+    enabled: true
+    capacity: 10               # 令牌桶容量
+    rate: 5                    # 每秒补充令牌数
+
+logging:
+  level:
+    com.conrad.shortlink: DEBUG
+    org.hibernate.SQL: DEBUG
+
+---
+# 开发环境 profile（默认）
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+---
+# 生产环境 profile（MySQL + Redis）
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/shortlink?useSSL=false&serverTimezone=Asia/Shanghai
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+shortlink:
+  base-url: ${BASE_URL:https://s.your-domain.com}
+  cache:
+    type: redis
