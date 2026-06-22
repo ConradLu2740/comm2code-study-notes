@@ -41,6 +41,7 @@ shortlink:
   base-url: http://localhost:8080
   short-code:
     length: 7                 # 短码长度（7 位 ≈ 3.5 万亿组合）
+    id-generator: snowflake   # snowflake | redis
   cache:
     # 可选值: memory（默认, ConcurrentHashMap）| redis（需 Redis 服务）
     type: memory
@@ -49,6 +50,21 @@ shortlink:
     enabled: true
     capacity: 3                # 令牌桶容量（紧一点方便测试，生产改回 10）
     rate: 0.5                  # 每秒补充令牌数（生产改回 5）
+
+  # ===== JWT 配置 =====
+  jwt:
+    secret: ${JWT_SECRET:conrad-shortlink-secret-key-please-change-in-production-min-32-bytes}
+    expiration-seconds: 604800   # 7 天
+
+  # ===== 统计 =====
+  stats:
+    enabled: true
+    async-logging: true       # 异步写访问日志，不阻塞主请求
+    ip2region-db-path: ip2region/ip2region.xdb   # classpath 路径
+
+  # ===== 自定义域名 =====
+  domain:
+    verify-ownership: false   # 生产环境应该开启 DNS 验证
 
 logging:
   level:

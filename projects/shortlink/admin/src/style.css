@@ -1,0 +1,70 @@
+/* 全局样式
+   教学点：
+   1. CSS 变量集中放 :root 里，方便主题色切换
+   2. * 通用选择器不要用太多，会拖累渲染性能
+   3. 滚动条样式让 UI 更精致（Webkit 内核）
+*/
+:root {
+  --primary-color: #409eff;
+  --bg-color: #f5f7fa;
+  --sidebar-bg: #304156;
+  --sidebar-text: #bfcbd9;
+  --sidebar-active: #409eff;
+  --header-height: 60px;
+  --sidebar-width: 220px;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background-color: var(--bg-color);
+  color: #303133;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c0c4cc;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #909399;
+}
+
+/* 通用工具类 */
+.flex {
+  display: flex;
+}
+.flex-1 {
+  flex: 1;
+}
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.text-muted {
+  color: #909399;
+  font-size: 12px;
+}
+
+/* 卡片标题 */
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 16px;
+}
+
+/* 表格行间距 */
+.el-table th {
+  background-color: #fafafa !important;
+}

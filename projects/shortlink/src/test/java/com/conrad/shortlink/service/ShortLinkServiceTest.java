@@ -2,42 +2,38 @@ package com.conrad.shortlink.service;
 
 import com.conrad.shortlink.entity.ShortLink;
 import com.conrad.shortlink.exception.ShortLinkNotFoundException;
+import com.conrad.shortlink.id.IdGenerator;
 import com.conrad.shortlink.repository.ShortLinkRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
  * ShortLinkService 单元测试
- *
- * 教学点：
- * 1. Mockito 模拟依赖（Repository、Cache、Generator）
- * 2. @BeforeEach 在每个测试前初始化 mocks
- * 3. when().thenReturn() 模拟方法返回值
- * 4. verify() 验证方法被调用次数（推荐用 ArgumentCaptor 捕获参数）
  */
 class ShortLinkServiceTest {
 
     private ShortLinkRepository repository;
-    private ShortCodeGenerator codeGenerator;
+    private IdGenerator idGenerator;
     private CacheService cache;
     private ShortLinkService service;
 
     @BeforeEach
     void setUp() {
         repository = mock(ShortLinkRepository.class);
-        codeGenerator = mock(ShortCodeGenerator.class);
+        idGenerator = mock(IdGenerator.class);
         cache = mock(CacheService.class);
-        service = new ShortLinkService(repository, codeGenerator, cache);
+        service = new ShortLinkService(repository, idGenerator, cache);
     }
 
     @Test
     void shouldCreateShortLinkWithGeneratedCode() {
-        when(codeGenerator.generate()).thenReturn("abc123");
+        when(idGenerator.generateCode()).thenReturn("abc123");
         when(repository.save(any(ShortLink.class))).thenAnswer(inv -> {
             ShortLink arg = inv.getArgument(0);
             arg.setId(1L);
@@ -63,7 +59,7 @@ class ShortLinkServiceTest {
         ShortLink result = service.createShortLink("https://example.com", "myalias");
 
         assertEquals("myalias", result.getShortCode());
-        verify(codeGenerator, never()).generate();  // 不应该调生成器
+        verify(idGenerator, never()).generateCode();
     }
 
     @Test
@@ -117,7 +113,7 @@ class ShortLinkServiceTest {
     }
 
     @Test
-    void shouldCaptureIncrementClickCountArgs() {
+    void shouldRecordAccess() {
         service.recordAccess("abc");
         verify(repository).incrementClickCount("abc");
     }

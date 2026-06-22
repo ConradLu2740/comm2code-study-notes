@@ -1,0 +1,121 @@
+# ============================================================
+# docker-compose.yml —— 一键启动 shortlink 全套环境
+# ------------------------------------------------------------
+# 用法：
+#   docker-compose up -d          # 后台启动全部服务
+#   docker-compose down           # 停止并移除容器、网络
+#   docker-compose logs -f app    # 跟踪看 app 日志
+#   docker-compose ps             # 查看服务状态
+#
+# 教学点：
+#   - mysql / redis 用官方镜像 + 健康检查（healthcheck），
+#     app 通过 depends_on + condition: service_healthy 等依赖真正就绪才启动
+#   - 卷（volumes）持久化 mysql 数据，避免 docker-compose down -v 丢库
+#   - 敏感配置（DB_PASSWORD / JWT_SECRET）用环境变量注入，
+#     生产环境建议改用 .env 文件或 docker secrets
+#   - 不用 latest tag，全部固定具体版本
+# ============================================================
+
+services:
+  # ===================== MySQL =====================
+  mysql:
+    image: mysql:8.0
+    container_name: shortlink-mysql
+    restart: unless-stopped
+    environment:
+      # 阿里云 / 腾讯云的 MySQL 镜像默认 root 密码策略严格，
+      # MYSQL_ROOT_HOST 用通配符 % 允许任意来源的 root 连接（生产慎用）
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:root123}
+      MYSQL_DATABASE: ${DB_NAME:shortlink}
+      MYSQL_USER: ${DB_USER:shortlink}
+      MYSQL_PASSWORD: ${DB_PASSWORD:shortlink123}
+      TZ: Asia/Shanghai
+    ports:
+      # 主机 3307 → 容器 3306，避免和宿主机已有 MySQL 撞端口
+      - "3307:3306"
+    volumes:
+      # 命名卷持久化数据（路径 /var/lib/mysql 是镜像内的默认数据目录）
+      - mysql_data:/var/lib/mysql
+      # 初始化脚本目录：首次启动时执行 *.sql（建表 / 灌种子数据）
+      - ./docs/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # mysqladmin ping 探活，比 mysql -e "SELECT 1" 更轻量
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${DB_ROOT_PASSWORD:root123}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s   # 首次启动宽容期（mysql 初始化很慢）
+    networks:
+      - shortlink-net
+
+  # ===================== Redis =====================
+  redis:
+    image: redis:7-alpine
+    container_name: shortlink-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    # --appendonly yes 开启 AOF 持久化，比默认 RDB 更安全
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      # redis-cli ping 返回 PONG 即健康
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - shortlink-net
+
+  # ===================== App (Spring Boot) =====================
+  app:
+    build:
+      context: .              # Dockerfile 所在目录
+      dockerfile: Dockerfile
+    image: shortlink:0.2.0
+    container_name: shortlink-app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy   # 等 mysql healthy 再启
+      redis:
+        condition: service_healthy   # 等 redis healthy 再启
+    environment:
+      # 激活 application.yml 里的 prod profile（MySQL + Redis）
+      SPRING_PROFILES_ACTIVE: prod
+      # 数据库连接：mysql 是 docker-compose 内置 DNS，
+      # 容器之间直接用服务名访问（短链服务 → mysql:3306）
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:shortlink}
+      DB_USER: ${DB_USER:shortlink}
+      DB_PASSWORD: ${DB_PASSWORD:shortlink123}
+      # Redis 连接
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # JWT 密钥：生产环境务必改成强随机串（32 字节以上）
+      # 例：openssl rand -base64 48
+      JWT_SECRET: ${JWT_SECRET:conrad-shortlink-secret-please-change-in-production-32bytes-min}
+      # 短链服务对外的基础域名（生成分享链接时用）
+      BASE_URL: ${BASE_URL:http://localhost:8080}
+      # JVM 参数（可被 -XX:+UseContainerSupport 自动识别，限制堆内存）
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0"
+      TZ: Asia/Shanghai
+    ports:
+      - "8080:8080"
+    networks:
+      - shortlink-net
+
+# ===================== 网络 / 卷 =====================
+networks:
+  shortlink-net:
+    driver: bridge
+    name: shortlink-net   # 自定义网络名，方便外部容器接入
+
+volumes:
+  mysql_data:
+    name: shortlink-mysql-data
+  redis_data:
+    name: shortlink-redis-data
